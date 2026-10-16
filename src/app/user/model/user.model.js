@@ -40,7 +40,14 @@ const userSchema = new Schema(
             type: String,
             enum: ['male', 'female'],
             default: 'male'// update to female after email verification
-        },
+        }, 
+        profilePicPath: String,
+        coverImagePaths: [String],
+        cvPath: String,
+
+
+
+
        // createdAt: Date,
        // updatedAt: Date
     }  ,

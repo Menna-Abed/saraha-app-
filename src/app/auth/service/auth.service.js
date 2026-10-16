@@ -1,15 +1,16 @@
 import * as authRepository from "../repository/auth.repository.js";
 import * as otpRepository from "../repository/otp.repository.js";
 import * as userRepository from '../../user/repository/user.repository.js'
-import {sendEmail} from "../../../common/email/nodemailer.js";
-import {toMs} from "../../../common/utils/time.js";
+
+import {toMs} from "../../../pkg/utils/time.js";
 import {otpExpired ,invalidCode,invalidPassword} from "../errors.js";
 import {  userNotExist,userAlreadyVerified ,userAlreadyExist,userNotVerified } from "../../user/errors.js";
-import {generateOTPCode} from "../../../common/utils/otp.js";
-import {logger} from "../../../common/logger/logger.js";
+import {generateOTPCode} from "../../../lib/utils/otp.js";
+import {logger} from "../../../pkg/logger/logger.js";
 import {generateToken} from "../utils/token.js";
 import {comparePassword, hashPassword} from "../utils/hash.js";
-import {verifyGoogleToken} from "../../../common/utils/google-auth.js";
+import {verifyGoogleToken} from "../../../lib/utils/google-auth.js";
+import {mailjetProvider} from "../../../lib/email/init.js";
 
 export async function register(userData)  {
 // We make an error example to check serve erro handler
@@ -31,7 +32,7 @@ logger.info(code);
     });
 
 
-   await sendEmail(
+   await mailjetProvider.sendMail(
         userData.email,
         'verification code',
         `<h1>Your verification code is ${code} </h1>`
@@ -52,11 +53,13 @@ export async function verifyAccount(email, code) {
 }
 
 export async function login(email, password) {
-    const user = await authRepository.checkUserExistByEmail(email);
-    if (!user) throw userNotExist;
-    if (user.isVerified === false) throw userNotVerified;
-    const match = await comparePassword(password, user['password']);
-    if (!match) throw invalidPassword;
+        const user = await authRepository.checkUserExistByEmail(email);
+        if (!user) throw userNotExist;
+        if (user.isVerified === false) throw userNotVerified;
+    console.log("Password from user:", password);
+    console.log("Password from DB:", user?.password);
+        const match = await comparePassword(password, user['password']);
+        if (!match) throw invalidPassword;
 
 
     return generateToken( { id: user._id, email: user.email, name: user.name });
@@ -72,7 +75,7 @@ export async function sendOtp(email) {
         email: email,
         expiresAt: Date.now() + toMs(3, 'minutes')
     });
-    await sendEmail(email, 'new otp', `<p>your new otp is ${code}</p>`);
+    await mailjetProvider.sendMail(email, 'new otp', `<p>your new otp is ${code}</p>`);
 }
 
 
