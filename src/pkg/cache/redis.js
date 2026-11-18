@@ -27,4 +27,8 @@ export class RedisCacheProvider {
     async del(key) {
         return this.client.del(key);
     }
+
+    async ttl(key) {
+        return this.client.ttl(key);
+    }
 }

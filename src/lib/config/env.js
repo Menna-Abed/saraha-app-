@@ -52,7 +52,9 @@ export const env = {
         password: parsed.MAIL_PASSWORD,
     },
     jwt: {
-        secret: parsed.JWT_SECRET,
+        
+        accessSecret: parsed.JWT_ACCESS_SECRET,
+        refreshSecret: parsed.JWT_REFRESH_SECRET
     },
 
     payments: {},

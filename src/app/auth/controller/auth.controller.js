@@ -2,6 +2,7 @@ import * as authService from "../service/auth.service.js";
 import {toMs} from "../../../pkg/utils/time.js";
 import {validateBody} from "../../../lib/validation/validation.js";
 import {loginDTO, registerDTO, resetPasswordDTO, sendOTPDto, verifyAccountDTO} from "../dto/auth.dto.js";
+import {setCookies} from "../utils.js";
 
 export async function register(req, res, next)   {
     try {
@@ -37,10 +38,22 @@ export async function login(req, res, next) {
     try {
         const data = validateBody(loginDTO, req.body);
         const { email, password } = data;
-        const token = await authService.login(email, password);
-        res.cookie('access_token', token, {
+        const result = await authService.login(email, password);
+        if (result && result.twoStepRequired) {
+            return res.json({
+                message: 'Verification code sent to your email',
+                success: true,
+                twoStepRequired: true,
+            });
+        }
+        res.cookie('access_token', result.accessToken, {
             httpOnly: true,
             maxAge: toMs(1, 'hours'),
+        });
+        res.cookie('refresh_token', result.refreshToken, {
+            httpOnly: true,
+            maxAge: toMs(7, 'days'),
+            path: '/api/auth/refresh-token',
         });
         res.json({
             message: 'User Login Successfully',
@@ -85,4 +98,48 @@ export async function loginWithGoogle(req, res, next) {
     } catch (error) {
         next(error);
     }
+}
+
+export async function refreshToken(req, res, next) {
+  try {
+    const { accessToken, refreshToken } = await authService.refreshTokenFn(req.cookies.refresh_token);
+    setCookies(res, accessToken, refreshToken)
+    res.json({
+      message: "refresh token successfully",
+      success: true,
+      data: { accessToken, refreshToken }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function enable2StepVerification(req, res, next) {
+  try {
+    await authService.enable2StepVerification(req.body.email);
+    res.json('OK');
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export async function verifyCodeActiveTwoStepVerification(req, res, next) {
+  try {
+    await authService.verifyCodeActiveTwoStepVerification(req.body.email, req.body.code);
+    res.json('OK');
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyCodeTwoStepVerification(req, res, next) {
+  try {
+    const { accessToken, refreshToken } = await authService.verifyCodeTwoStepVerification(req.body.email, req.body.code);
+    setCookies(res, accessToken, refreshToken);
+    res.json('ok');
+  } catch (error) {
+    next(error);
+  }
 }

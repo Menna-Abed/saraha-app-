@@ -19,3 +19,7 @@ export async function getAllMessages(userId) {
         { populate: { path: "sender" , select: "name" } }
     );
 }
+
+export async function findMessageById(id) {
+    return await Message.findById(id);
+}
